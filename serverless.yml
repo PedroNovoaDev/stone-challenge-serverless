@@ -6,9 +6,17 @@ provider:
   runtime: nodejs18.x
 
 functions:
-  api:
-    handler: index.handler
+  showTonVisitCount:
+    handler: api/handlers.showTonVisitCount
     events:
       - httpApi:
-          path: /
+          path: /show-ton-visit-count
           method: get
+  incrementTonVisitCount:
+    handler: api/handlers.incrementTonVisitCount
+    events:
+      - httpApi:
+          path: /increment-ton-visit-count
+          method: get
+plugins:
+  - serverless-offline
