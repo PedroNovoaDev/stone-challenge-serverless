@@ -104,3 +104,33 @@ module.exports.addNewUser = async (event) => {
     };
   }
 };
+
+module.exports.searchUserById = async (event) => {
+
+  const token = event.headers.authorization;
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+
+  const userId = event.pathParameters.id.toString();
+
+  const params = {
+    TableName: tableName,
+    Key: { id: userId },
+  };
+
+  let user;
+
+  try {
+    verifyToken(token);
+    user = await dynamodb.get(params).promise();
+    return {
+      statusCode: 200,
+      body: JSON.stringify(user)
+    };
+  } catch (err) {
+    console.log(err)
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: 'Unable to find user' })
+    };
+  }
+};

@@ -26,5 +26,12 @@ functions:
       - httpApi:
           path: /add-new-user
           method: post
+  searchUserById:
+    handler: api/handlers.searchUserById
+    events:
+      - httpApi:
+          path: /search-user-by-id/{id}
+          method: get
+
 plugins:
   - serverless-offline
