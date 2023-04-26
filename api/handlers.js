@@ -32,7 +32,10 @@ function verifyToken(token) {
 module.exports.showTonVisitCount = async (event) => {
 
   const token = event.headers.authorization;
-  if (!token) return res.status(401).json({ message: 'No token provided' });
+  if (!token) return {
+    statusCode: 401,
+    body: JSON.stringify({ message: 'No token provided' }),
+  }
 
   let result;
 
@@ -42,7 +45,10 @@ module.exports.showTonVisitCount = async (event) => {
     console.log(result)
   } catch (error) {
     console.log(error)
-    return res.status(401).json({ message: 'Invalid token' });
+    return {
+      statusCode: 401,
+      body: JSON.stringify({ message: 'Invalid token' }),
+    }
   }
 
   return {
@@ -54,7 +60,10 @@ module.exports.showTonVisitCount = async (event) => {
 module.exports.incrementTonVisitCount = async (event) => {
 
   const token = event.headers.authorization;
-  if (!token) return res.status(401).json({ message: 'No token provided' });
+  if (!token) return {
+    statusCode: 401,
+    body: JSON.stringify({ message: 'No token provided' }),
+  }
 
   let result;
 
@@ -64,7 +73,10 @@ module.exports.incrementTonVisitCount = async (event) => {
     console.log(result)
   } catch (error) {
     console.log(error)
-    return res.status(401).json({ message: 'Invalid token' })
+    return {
+      statusCode: 401,
+      body: JSON.stringify({ message: 'Invalid token' }),
+    }
   }
 
   return {
@@ -108,7 +120,10 @@ module.exports.addNewUser = async (event) => {
 module.exports.searchUserById = async (event) => {
 
   const token = event.headers.authorization;
-  if (!token) return res.status(401).json({ message: 'No token provided' });
+  if (!token) return {
+    statusCode: 401,
+    body: JSON.stringify({ message: 'No token provided' }),
+  }
 
   const userId = event.pathParameters.id.toString();
 
@@ -121,16 +136,25 @@ module.exports.searchUserById = async (event) => {
 
   try {
     verifyToken(token);
-    user = await dynamodb.get(params).promise();
+
+    try {
+      user = await dynamodb.get(params).promise();
+      return {
+        statusCode: 200,
+        body: JSON.stringify(user)
+      };
+    } catch (err) {
+      console.log(err)
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ message: 'Unable to find user' })
+      };
+    }
+  } catch (error) {
+    console.log(error)
     return {
-      statusCode: 200,
-      body: JSON.stringify(user)
-    };
-  } catch (err) {
-    console.log(err)
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: 'Unable to find user' })
-    };
+      statusCode: 401,
+      body: JSON.stringify({ message: 'Invalid token' }),
+    }
   }
 };
