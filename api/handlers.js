@@ -26,8 +26,11 @@ function verifyToken(token) {
 }
 
 async function authorize(event) {
-  const { authorization } = event.headers
+
+  const authorization = event.headers.authorization;
+
   if (!authorization) {
+    console.log('!authorization')
     return {
       statusCode: 401,
       body: JSON.stringify({ message: 'Missing authorization header' }),
@@ -35,7 +38,9 @@ async function authorize(event) {
   }
 
   const [type, token] = authorization.split(' ')
+
   if (type != 'Bearer' || !token) {
+    console.log('!Bearer')
     return {
       statusCode: 401,
       body: JSON.stringify({ message: 'Unsuported authorization type' }),
@@ -45,6 +50,7 @@ async function authorize(event) {
   const decodedToken = verifyToken(token);
 
   if (!decodedToken) {
+    console.log('!decodedToken')
     return {
       statusCode: 401,
       body: JSON.stringify({ message: 'Invalid token' }),
@@ -56,19 +62,12 @@ async function authorize(event) {
 
 module.exports.showTonVisitCount = async (event) => {
 
-  let result;
+  const authResult = await authorize(event);
+  if (authResult.statusCode == 401) return authResult
 
-  try {
-    authorize(event);
-    result = await countapi.get('ton.com.br', '7c84145f-8ffc-4873-b6f7-3e92214f4267')
-    console.log(result)
-  } catch (error) {
-    console.log(error)
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ message: 'Invalid token' }),
-    }
-  }
+  let result;
+  result = await countapi.get('ton.com.br', '7c84145f-8ffc-4873-b6f7-3e92214f4267')
+  console.log(result)
 
   return {
     statusCode: 200,
@@ -78,19 +77,12 @@ module.exports.showTonVisitCount = async (event) => {
 
 module.exports.incrementTonVisitCount = async (event) => {
 
-  let result;
+  const authResult = await authorize(event);
+  if (authResult.statusCode == 401) return authResult
 
-  try {
-    authorize(event);
-    result = await countapi.hit('ton.com.br', '7c84145f-8ffc-4873-b6f7-3e92214f4267')
-    console.log(result)
-  } catch (error) {
-    console.log(error)
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ message: 'Invalid token' }),
-    }
-  }
+  let result;
+  result = await countapi.hit('ton.com.br', '7c84145f-8ffc-4873-b6f7-3e92214f4267')
+  console.log(result)
 
   return {
     statusCode: 200,
@@ -132,6 +124,9 @@ module.exports.addNewUser = async (event) => {
 
 module.exports.searchUserById = async (event) => {
 
+  const authResult = await authorize(event);
+  if (authResult.statusCode == 401) return authResult
+
   const userId = event.pathParameters.id.toString();
 
   const params = {
@@ -142,28 +137,19 @@ module.exports.searchUserById = async (event) => {
   let user;
 
   try {
-    authorize(event);
-
-    try {
-      user = await dynamodb.get(params).promise();
-      return {
-        statusCode: 200,
-        body: JSON.stringify(user)
-      };
-    } catch (err) {
-      console.log(err)
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ message: 'Unable to find user' })
-      };
-    }
-  } catch (error) {
-    console.log(error)
+    user = await dynamodb.get(params).promise();
     return {
-      statusCode: 401,
-      body: JSON.stringify({ message: 'Invalid token' }),
-    }
+      statusCode: 200,
+      body: JSON.stringify(user)
+    };
+  } catch (err) {
+    console.log(err)
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: 'Unable to find user' })
+    };
   }
+
 };
 
 module.exports.userLogin = async (event) => {
@@ -180,11 +166,7 @@ module.exports.userLogin = async (event) => {
     }
   };
 
-  console.log('params ', params);
-
   const user = await dynamodb.scan(params).promise();
-
-  console.log('user ', user);
 
   if (user.Count == 0) {
     return {
