@@ -5,6 +5,7 @@ provider:
   name: aws
   runtime: nodejs18.x
   environment:
+    SALT: FRCTcXr2rxMH2igAvYh5M8tCCe1C5Qho
     JWT_SECRET: 629a7c8b08ed042a9f2e87300af24e0c
 
 functions:
@@ -32,6 +33,15 @@ functions:
       - httpApi:
           path: /search-user-by-id/{id}
           method: get
+  userLogin:
+    handler: api/handlers.userLogin
+    events:
+      - httpApi:
+          path: /user-login
+          method: post
+          request:
+            schemas:
+              application/json: ${file(./schemas/userLogin.json)}
 
 plugins:
   - serverless-offline

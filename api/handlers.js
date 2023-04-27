@@ -1,9 +1,10 @@
 const AWS = require('aws-sdk');
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 const tableName = 'stone-users';
+const countapi = require('countapi-js');
 const jwt = require('jsonwebtoken');
 const secret = process.env.JWT_SECRET;
-const countapi = require('countapi-js');
+const { pbkdf2Sync } = require('crypto');
 
 function extractBody(event) {
   if (!event?.body) {
@@ -16,31 +17,49 @@ function extractBody(event) {
   return JSON.parse(event.body);
 }
 
-function generateToken(user) {
-  const payload = {
-    id: user.id,
-    name: user.name,
-    password: user.password,
-  };
-  return jwt.sign(payload, secret);
+function generateToken(payload) {
+  return jwt.sign(payload, secret, { expiresIn: '24h' });
 }
 
 function verifyToken(token) {
   return jwt.verify(token, secret);
 }
 
-module.exports.showTonVisitCount = async (event) => {
-
-  const token = event.headers.authorization;
-  if (!token) return {
-    statusCode: 401,
-    body: JSON.stringify({ message: 'No token provided' }),
+async function authorize(event) {
+  const { authorization } = event.headers
+  if (!authorization) {
+    return {
+      statusCode: 401,
+      body: JSON.stringify({ message: 'Missing authorization header' }),
+    }
   }
+
+  const [type, token] = authorization.split(' ')
+  if (type != 'Bearer' || !token) {
+    return {
+      statusCode: 401,
+      body: JSON.stringify({ message: 'Unsuported authorization type' }),
+    }
+  }
+
+  const decodedToken = verifyToken(token);
+
+  if (!decodedToken) {
+    return {
+      statusCode: 401,
+      body: JSON.stringify({ message: 'Invalid token' }),
+    }
+  }
+
+  return decodedToken;
+}
+
+module.exports.showTonVisitCount = async (event) => {
 
   let result;
 
   try {
-    verifyToken(token);
+    authorize(event);
     result = await countapi.get('ton.com.br', '7c84145f-8ffc-4873-b6f7-3e92214f4267')
     console.log(result)
   } catch (error) {
@@ -59,16 +78,10 @@ module.exports.showTonVisitCount = async (event) => {
 
 module.exports.incrementTonVisitCount = async (event) => {
 
-  const token = event.headers.authorization;
-  if (!token) return {
-    statusCode: 401,
-    body: JSON.stringify({ message: 'No token provided' }),
-  }
-
   let result;
 
   try {
-    verifyToken(token);
+    authorize(event);
     result = await countapi.hit('ton.com.br', '7c84145f-8ffc-4873-b6f7-3e92214f4267')
     console.log(result)
   } catch (error) {
@@ -87,12 +100,14 @@ module.exports.incrementTonVisitCount = async (event) => {
 
 module.exports.addNewUser = async (event) => {
 
-  const { id, name, password } = extractBody(event);
+  const { id, userName, password } = extractBody(event);
+
+  const hashedPass = pbkdf2Sync(password, process.env.SALT, 100000, 64, 'sha512').toString('hex');
 
   const user = {
     id: id,
-    name: name,
-    password: password
+    userName: userName,
+    password: hashedPass
   };
 
   const params = {
@@ -100,13 +115,11 @@ module.exports.addNewUser = async (event) => {
     Item: user
   };
 
-  const token = generateToken(user);
-
   try {
     await dynamodb.put(params).promise();
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: `User created successfully with token: ${token}` })
+      body: JSON.stringify({ message: `User created successfully` })
     };
   } catch (err) {
     console.log(err)
@@ -119,12 +132,6 @@ module.exports.addNewUser = async (event) => {
 
 module.exports.searchUserById = async (event) => {
 
-  const token = event.headers.authorization;
-  if (!token) return {
-    statusCode: 401,
-    body: JSON.stringify({ message: 'No token provided' }),
-  }
-
   const userId = event.pathParameters.id.toString();
 
   const params = {
@@ -135,7 +142,7 @@ module.exports.searchUserById = async (event) => {
   let user;
 
   try {
-    verifyToken(token);
+    authorize(event);
 
     try {
       user = await dynamodb.get(params).promise();
@@ -156,5 +163,43 @@ module.exports.searchUserById = async (event) => {
       statusCode: 401,
       body: JSON.stringify({ message: 'Invalid token' }),
     }
+  }
+};
+
+module.exports.userLogin = async (event) => {
+  const { userName, password } = extractBody(event);
+
+  const hashedPass = pbkdf2Sync(password, process.env.SALT, 100000, 64, 'sha512').toString('hex');
+
+  const params = {
+    TableName: tableName,
+    FilterExpression: "userName = :userNameValue AND password = :passwordValue",
+    ExpressionAttributeValues: {
+      ":userNameValue": userName,
+      ":passwordValue": hashedPass
+    }
+  };
+
+  console.log('params ', params);
+
+  const user = await dynamodb.scan(params).promise();
+
+  console.log('user ', user);
+
+  if (user.Count == 0) {
+    return {
+      statusCode: 401,
+      body: JSON.stringify({ message: 'Invalid credentials' }),
+    }
+  }
+
+  const token = generateToken(user);
+
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ token: token })
   }
 };
