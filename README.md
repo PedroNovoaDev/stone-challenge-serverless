@@ -14,10 +14,13 @@ Bonus points for clean code practices, good versioning,  deploying in a server a
 ## Stack used
 
 **Back-end:** Node, Serverless
+
 **Infrastucture:** API Gateway, Lambda, DynamoDB
 
 
 ## Running local
+
+- Configure you AWS account with serverless.
 
 Clone the project
 
@@ -62,7 +65,7 @@ To run this project, you'll need to modify the following env variables in your s
 | Body   | Type       | Description                           |
 | :---------- | :--------- | :---------------------------------- |
 | `id` | `string` | User ID |
-| `userName` | `string` | User name |
+| `userName` | `string` | Username |
 | `password` | `string` | User password |
 
 
@@ -74,7 +77,7 @@ To run this project, you'll need to modify the following env variables in your s
 
 | Body   | Type       | Description                           |
 | :---------- | :--------- | :---------------------------------- |
-| `userName` | `string` | User name |
+| `userName` | `string` | Username |
 | `password` | `string` | User password |
 
 
