@@ -9,32 +9,14 @@ provider:
     JWT_SECRET: 629a7c8b08ed042a9f2e87300af24e0c
 
 functions:
-  showTonVisitCount:
-    handler: api/handlers.showTonVisitCount
-    events:
-      - httpApi:
-          path: /show-ton-visit-count
-          method: get
-  incrementTonVisitCount:
-    handler: api/handlers.incrementTonVisitCount
-    events:
-      - httpApi:
-          path: /increment-ton-visit-count
-          method: get
   addNewUser:
-    handler: api/handlers.addNewUser
+    handler: api/userHandler.addNewUser
     events:
       - httpApi:
           path: /add-new-user
           method: post
-  searchUserById:
-    handler: api/handlers.searchUserById
-    events:
-      - httpApi:
-          path: /search-user-by-id/{id}
-          method: get
   userLogin:
-    handler: api/handlers.userLogin
+    handler: api/userHandler.userLogin
     events:
       - httpApi:
           path: /user-login
@@ -42,6 +24,24 @@ functions:
           request:
             schemas:
               application/json: ${file(./schemas/userLogin.json)}
+  searchUserById:
+    handler: api/userHandler.searchUserById
+    events:
+      - httpApi:
+          path: /search-user-by-id/{id}
+          method: get
+  showTonVisitCount:
+    handler: api/countHandler.showTonVisitCount
+    events:
+      - httpApi:
+          path: /show-ton-visit-count
+          method: get
+  incrementTonVisitCount:
+    handler: api/countHandler.incrementTonVisitCount
+    events:
+      - httpApi:
+          path: /increment-ton-visit-count
+          method: get
 
 plugins:
   - serverless-offline
